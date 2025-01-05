@@ -156,21 +156,21 @@ public class TrajectoryProvinceSnapshotProcessor {
                 "            from t1),\n" +
                 "     t3 as (select c_msisdn,\n" +
                 "                   c_event_date,\n" +
-                "                   c_curr_province,\n" +
+                "                   c_curr_province                                                                 c_province,\n" +
                 "                   unix_timestamp(max(c_event_timestamp)) - unix_timestamp(min(c_event_timestamp)) c_duration,\n" +
+                "                   count(curr_province_window_id)                                                  c_cnt,\n" +
                 "                   curr_province_window_id\n" +
                 "            from t2\n" +
-                "            group by c_msisdn, c_event_date, c_curr_province, curr_province_window_id),\n" +
-                "     t4 as (select c_msisdn,\n" +
-                "                   c_event_date,\n" +
-                "                   c_curr_province                   c_province,\n" +
-                "                   sum(c_duration)                   c_duration,\n" +
-                "                   count(curr_province_window_id) as c_cnt\n" +
-                "            from t3\n" +
-                "            group by c_msisdn, c_event_date, c_curr_province\n" +
-                "            order by c_msisdn, c_event_date)\n" +
-                "insert overwrite table t_lbs_person_province_snapshot partition ( c_event_date )\n" +
-                "select t4.c_msisdn,\n" +
+                "            group by c_msisdn, c_event_date, c_curr_province, curr_province_window_id)\n" +
+                "insert\n" +
+                "overwrite\n" +
+                "table\n" +
+                "t_lbs_person_province_snapshot\n" +
+                "partition\n" +
+                "(\n" +
+                "c_event_date\n" +
+                ")\n" +
+                "select t3.c_msisdn,\n" +
                 "       c_imsi,\n" +
                 "       c_imei,\n" +
                 "       c_homecode,\n" +
@@ -178,10 +178,10 @@ public class TrajectoryProvinceSnapshotProcessor {
                 "       c_msisdn_home,\n" +
                 "       c_imei_brand,\n" +
                 "       c_province,\n" +
-                "       c_duration,\n" +
+                "       t3.c_duration,\n" +
                 "       c_cnt,\n" +
-                "       t4.c_event_date\n" +
-                "from t4\n" +
+                "       t3.c_event_date\n" +
+                "from t3\n" +
                 "         left join (select distinct c_msisdn,\n" +
                 "                                    c_imsi,\n" +
                 "                                    c_imei,\n" +
@@ -189,7 +189,8 @@ public class TrajectoryProvinceSnapshotProcessor {
                 "                                    c_imsi_mcc,\n" +
                 "                                    c_msisdn_home,\n" +
                 "                                    c_imei_brand\n" +
-                "                    from t_lbs_trajectory) t on t4.c_msisdn = t.c_msisdn;";
+                "                    from t_lbs_trajectory) t on t3.c_msisdn = t.c_msisdn\n" +
+                "order by c_msisdn, c_event_date, curr_province_window_id;";
 
         // 执行查询操作
         sparkSession.sql(query);
